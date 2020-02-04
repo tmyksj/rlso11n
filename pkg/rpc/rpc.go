@@ -1,8 +1,8 @@
 package rpc
 
 import (
-	"github.com/tmyksj/rootless-orchestration/context"
-	"github.com/tmyksj/rootless-orchestration/logger"
+	"github.com/tmyksj/rlso11n/app/logger"
+	"github.com/tmyksj/rlso11n/pkg/context"
 	"net"
 	"net/http"
 	"net/rpc"
@@ -25,8 +25,7 @@ func Call(host string, serviceMethod string, req interface{}, res interface{}) e
 	if !ok {
 		c, err := rpc.DialHTTP("tcp", host+":"+strconv.Itoa(context.RpcPort()))
 		if err != nil {
-			logger.Errorf("rpc", "fail to connect to %v", host)
-			logger.Errorf("rpc", "%v", err)
+			logger.Errorf("pkg/rpc", "fail to connect to %v, %v", host, err)
 
 			clientMu.Unlock()
 			return err
@@ -35,19 +34,18 @@ func Call(host string, serviceMethod string, req interface{}, res interface{}) e
 		client = c
 		clientMap[host] = client
 
-		logger.Infof("rpc", "succeed to connect to %v", host)
+		logger.Infof("pkg/rpc", "succeed to connect to %v", host)
 	}
 
 	clientMu.Unlock()
 
 	err := client.Call(serviceMethod, req, res)
 	if err != nil {
-		logger.Errorf("rpc", "fail to call %v", serviceMethod)
-		logger.Errorf("rpc", "%v", err)
+		logger.Errorf("pkg/rpc", "fail to call %v, %v", serviceMethod, err)
 		return err
 	}
 
-	logger.Infof("rpc", "succeed to call %v", serviceMethod)
+	logger.Infof("pkg/rpc", "succeed to call %v", serviceMethod)
 
 	return nil
 }
@@ -62,8 +60,7 @@ func Serve() error {
 
 	s := new(Rpc)
 	if err := rpc.Register(s); err != nil {
-		logger.Errorf("rpc", "fail to register rpc")
-		logger.Errorf("rpc", "%v", err)
+		logger.Errorf("pkg/rpc", "fail to register rpc, %v", err)
 		return err
 	}
 
@@ -71,19 +68,17 @@ func Serve() error {
 
 	l, err := net.Listen("tcp", ":"+strconv.Itoa(context.RpcPort()))
 	if err != nil {
-		logger.Errorf("rpc", "fail to listen %v/tcp", context.RpcPort())
-		logger.Errorf("rpc", "%v", err)
+		logger.Errorf("pkg/rpc", "fail to listen %v/tcp, %v", context.RpcPort(), err)
 		return err
 	}
 
 	go func() {
 		err := http.Serve(l, nil)
-		logger.Infof("rpc", "served")
-		logger.Infof("rpc", "%v", err)
+		logger.Infof("pkg/rpc", "served, %v", err)
 	}()
 
 	serverIsRunning = true
-	logger.Infof("rpc", "succeed to start server")
+	logger.Infof("pkg/rpc", "succeed to start server")
 
 	return nil
 }

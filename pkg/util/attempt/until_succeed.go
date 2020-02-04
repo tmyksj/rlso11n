@@ -4,10 +4,10 @@ import (
 	"time"
 )
 
-func UntilSucceed(f func() error, d time.Duration) {
+func UntilSucceed(f func() error) {
 	for {
 		if err := f(); err != nil {
-			time.Sleep(d)
+			time.Sleep(100 * time.Millisecond)
 		} else {
 			break
 		}

@@ -1,22 +1,22 @@
 package core
 
 import (
-	"github.com/tmyksj/rootless-orchestration/logger"
+	"github.com/tmyksj/rlso11n/app/logger"
 	"github.com/urfave/cli"
 	"math/rand"
 	"time"
 )
 
-func After(c *cli.Context) error {
+func After(_ *cli.Context) error {
 	finalize()
-	logger.Infof("core", "exit")
+	logger.Infof("app/core", "exit")
 
 	return nil
 }
 
-func Before(c *cli.Context) error {
+func Before(_ *cli.Context) error {
 	initialize()
-	logger.Infof("core", "completed to initialize")
+	logger.Infof("app/core", "completed to initialize")
 
 	return nil
 }

@@ -1,32 +1,73 @@
-# rootless-orchestration
-rootless-orchestration does:
-- manages docker daemon.
-- constructs/destructs orchestration (using Docker Swarm mode).
+# rlso11n: rootless-orchestration
+rlso11n does:
+- manages docker daemons.
+- constructs/destructs an cluster (using docker swarm mode).
+
+note: any releases under version 1.0.0 may contain breaking changes.
 
 ## usage
-we use two terminal (or background jobs).
+rlso11n uses two terminals (or background jobs).
 
-export ip address of hosts:
-```
-$ # both terminal 1 and 2
-$ export ROOTLESS_ORCHESTRATION_HOSTS="172.16.0.1,172.16.0.2"
-```
-
-start rootless-orchestration server:
+exports an ip address list of hosts:
 ```
 $ # terminal 1
-$ rootless-orchestration
+$ export RLSO11N_HOST_LIST="172.16.0.1,172.16.0.2"
 ```
 
-start docker daemon using rootless mode and constructs swarm cluster:
+starts rlso11n servers:
+```
+$ # terminal 1
+$ rlso11n bg/start
+```
+
+starts docker daemons using rootless mode:
 ```
 $ # terminal 2
-$ rootless-orchestration dockerd
-$ rootless-orchestration swarm
+$ rlso11n up/dockerd
 ```
 
-to exit rootless-orchestration, send ctrl+c at terminal 1:
+constructs a swarm cluster:
+```
+$ # terminal 2
+$ rlso11n up/swarm
+```
+
+to exit rlso11n, send ctrl+c at terminal 1:
 ```
 ^C
 $
-``` 
+```
+
+## installation
+```
+$ make
+$ make install
+$ make install_dependencies
+```
+
+## settings
+rlso11n uses environment variables for settings:
+```
+RLSO11N_DIR              use this directory to run rootless containers.
+RLSO11N_HOST_LIST        use these hosts to run rlso11n.
+RLSO11N_SSH_USERNAME     use ssh username to connect remote node via ssh.
+RLSO11N_SSH_IDENTITY     use ssh identity to connect remote node via ssh.
+```
+
+## administrator's settings
+### for centos
+installs glib2-devel, libcap-devel, libseccomp-devel for slirp4netns:
+```
+# yum install -y glib2-devel libcap-devel libseccomp-devel
+```
+
+sets subuid, subgid for user(s):
+```
+# echo username:100000:65536 >> /etc/subuid
+# echo username:100000:65536 >> /etc/subgid
+```
+
+sets max_user_namespaces:
+```
+# echo 28633 > /proc/sys/user/max_user_namespaces
+```

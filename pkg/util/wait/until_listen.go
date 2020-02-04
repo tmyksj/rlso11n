@@ -1,12 +1,11 @@
 package wait
 
 import (
-	"github.com/tmyksj/rootless-orchestration/pkg/attempt"
+	"github.com/tmyksj/rlso11n/pkg/util/attempt"
 	"net"
-	"time"
 )
 
-func UntilListen(addr string, d time.Duration) {
+func UntilListen(addr string) {
 	attempt.UntilSucceed(func() error {
 		conn, err := net.Dial("tcp", addr)
 		if err != nil {
@@ -15,5 +14,5 @@ func UntilListen(addr string, d time.Duration) {
 
 		_ = conn.Close()
 		return nil
-	}, d)
+	})
 }
