@@ -10,7 +10,7 @@ import (
 )
 
 func Pull(host string) {
-	wait.UntilListen(host + ":" + strconv.Itoa(context.RpcPort()))
+	wait.UntilListenTcp(host + ":" + strconv.Itoa(context.RpcPort()))
 
 	res := rpc.ResContextPull{}
 	attempt.UntilSucceed(func() error {
@@ -20,8 +20,6 @@ func Pull(host string) {
 	loader_proxy.Load(&loader_proxy.LoadReq{
 		Dir:           res.Dir,
 		HostList:      res.HostList,
-		SshAuthMethod: nil,
-		SshUsername:   "",
 		StarterAddr:   res.StarterAddr,
 	}, &loader_proxy.SetupReq{
 		Dir: false,

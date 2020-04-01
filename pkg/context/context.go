@@ -3,7 +3,6 @@ package context
 import (
 	"errors"
 	"github.com/tmyksj/rlso11n/app/logger"
-	"golang.org/x/crypto/ssh"
 	"os"
 )
 
@@ -27,6 +26,10 @@ func Dir() string {
 func SetDir(val string) {
 	dir = val
 	logger.Infof("pkg/context", "dir = %v", dir)
+}
+
+func DockerSock() string {
+	return Dir() + "/runtime/docker.sock"
 }
 
 func Env() []string {
@@ -64,28 +67,6 @@ func SetReady(val bool) {
 
 func RpcPort() int {
 	return 50128
-}
-
-var sshAuthMethod []ssh.AuthMethod
-
-func SshAuthMethod() []ssh.AuthMethod {
-	return sshAuthMethod
-}
-
-func SetSshAuthMethod(val []ssh.AuthMethod) {
-	sshAuthMethod = val
-	logger.Infof("pkg/context", "ssh auth method = #%v", len(sshAuthMethod))
-}
-
-var sshUsername string
-
-func SshUsername() string {
-	return sshUsername
-}
-
-func SetSshUsername(val string) {
-	sshUsername = val
-	logger.Infof("pkg/context", "ssh username = %v", sshUsername)
 }
 
 var starterAddr string

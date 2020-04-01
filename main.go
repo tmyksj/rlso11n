@@ -17,7 +17,7 @@ func main() {
 	app := cli.NewApp()
 	app.Name = "rlso11n"
 	app.Usage = "construct/destruct an orchestration"
-	app.Version = "0.0.2"
+	app.Version = "0.0.3"
 
 	app.After = core.After
 	app.Before = core.Before
@@ -27,6 +27,7 @@ func main() {
 			Name:   "bg/server",
 			Usage:  "(executed by " + app.Name + " only) starts rpc server",
 			Action: bg.Server,
+			Hidden: true,
 		},
 		{
 			Name:   "bg/start",
@@ -34,13 +35,18 @@ func main() {
 			Action: bg.Start,
 		},
 		{
-			Name: "exec/docker@...",
+			Name: "exec@{...}",
+			Usage: "executes command at given nodes\n" +
+				"\t\te.g.) " + app.Name + " exec@all hostname          # at all nodes\n" +
+				"\t\t      " + app.Name + " exec@manager hostname      # at manager nodes\n" +
+				"\t\t      " + app.Name + " exec@worker hostname       # at worker nodes\n" +
+				"\t\t      " + app.Name + " exec@0,2-7 hostname        # at 0, 2-7 nodes\n" +
+				"\t\t      " + app.Name + " exec@2-10 hostname         # at 2-10 nodes",
+		},
+		{
+			Name: "exec@{...}/docker",
 			Usage: "executes docker command at given nodes\n" +
-				"\t\te.g.) " + app.Name + " exec/docker@all run ...        # at all nodes\n" +
-				"\t\t      " + app.Name + " exec/docker@manager run ...    # at manager nodes\n" +
-				"\t\t      " + app.Name + " exec/docker@worker run ...     # at worker nodes\n" +
-				"\t\t      " + app.Name + " exec/docker@0,2-7 run ...      # at 0, 2-7 nodes\n" +
-				"\t\t      " + app.Name + " exec/docker@2-10 run ...       # at 2-10 nodes",
+				"\t\te.g.) " + app.Name + " exec@all/docker run ...    # at all nodes",
 		},
 		{
 			Name:   "up/dockerd",
@@ -54,7 +60,7 @@ func main() {
 		},
 	}
 
-	app.CommandNotFound = cmd.CommandNotFound
+	app.CommandNotFound = cmd.Proxy
 
 	err := app.Run(os.Args)
 	if err != nil {

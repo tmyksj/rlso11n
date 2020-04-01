@@ -4,7 +4,6 @@ import (
 	"github.com/tmyksj/rlso11n/app/core"
 	"github.com/tmyksj/rlso11n/app/logger"
 	"github.com/tmyksj/rlso11n/pkg/context"
-	"golang.org/x/crypto/ssh"
 	"net"
 	"os"
 	"os/exec"
@@ -13,8 +12,6 @@ import (
 type LoadReq struct {
 	Dir           string
 	HostList      []string
-	SshAuthMethod []ssh.AuthMethod
-	SshUsername   string
 	StarterAddr   string
 }
 
@@ -35,8 +32,6 @@ func load(req *LoadReq) {
 	context.SetAddr(parseAddr(req.HostList))
 	context.SetDir(req.Dir)
 	context.SetHostList(req.HostList)
-	context.SetSshAuthMethod(req.SshAuthMethod)
-	context.SetSshUsername(req.SshUsername)
 
 	if req.StarterAddr == CurrentAddr {
 		context.SetStarterAddr(context.Addr())

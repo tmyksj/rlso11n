@@ -42,8 +42,6 @@ func (r *Rpc) ContextPush(req *ReqContextPush, res *ResContextPush) error {
 	loader_proxy.Load(&loader_proxy.LoadReq{
 		Dir:           req.Dir,
 		HostList:      req.HostList,
-		SshAuthMethod: nil,
-		SshUsername:   "",
 		StarterAddr:   req.StarterAddr,
 	}, &loader_proxy.SetupReq{
 		Dir: true,

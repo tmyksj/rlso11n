@@ -5,9 +5,17 @@ import (
 	"net"
 )
 
-func UntilListen(addr string) {
+func UntilListenTcp(address string) {
+	untilListen("tcp", address)
+}
+
+func UntilListenUnix(address string) {
+	untilListen("unix", address)
+}
+
+func untilListen(network string, address string) {
 	attempt.UntilSucceed(func() error {
-		conn, err := net.Dial("tcp", addr)
+		conn, err := net.Dial(network, address)
 		if err != nil {
 			return err
 		}

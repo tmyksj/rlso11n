@@ -15,7 +15,7 @@ import (
 	"syscall"
 )
 
-const rlsDPidPrefix = "rtlso11n/dockerd_pid:"
+const rlsDPidPrefix = "rlso11n/dockerd_pid:"
 const rlsDScript = "rlsd.sh"
 
 var rlsD *exec.Cmd
@@ -38,22 +38,23 @@ func startRootless() error {
 	}
 
 	rlsD = exec.Command(scriptPath, "--experimental",
-		"--host", "unix://"+context.Dir()+"/runtime/docker.sock",
-		"--host", "tcp://0.0.0.0",
+		"--host", "unix://"+context.DockerSock(),
 		"--storage-driver", "vfs")
 	rlsD.Env = context.Env()
 	rlsD.SysProcAttr = &syscall.SysProcAttr{
 		Setpgid: true,
 	}
 
-	stdout, stdoutErr := rlsD.StdoutPipe()
-	if stdoutErr != nil {
-		logger.Errorf("pkg/ext/dockerd", "fail to pipe stdout, %v", stdoutErr)
+	if out, err := rlsD.StdoutPipe(); err != nil {
+		logger.Errorf("pkg/ext/dockerd", "fail to pipe stdout, %v", err)
+	} else {
+		go pipeStdout(out)
 	}
 
-	stderr, stderrErr := rlsD.StderrPipe()
-	if stdoutErr != nil {
-		logger.Errorf("pkg/ext/dockerd", "fail to pipe stderr, %v", stderrErr)
+	if out, err := rlsD.StderrPipe(); err != nil {
+		logger.Errorf("pkg/ext/dockerd", "fail to pipe stderr, %v", err)
+	} else {
+		go pipeStderr(out)
 	}
 
 	if err := rlsD.Start(); err != nil {
@@ -61,15 +62,7 @@ func startRootless() error {
 		return err
 	}
 
-	if stdoutErr == nil {
-		go pipeStdout(stdout)
-	}
-
-	if stderrErr == nil {
-		go pipeStderr(stderr)
-	}
-
-	wait.UntilListen(context.Addr() + ":2375")
+	wait.UntilListenUnix(context.DockerSock())
 
 	logger.Infof("pkg/ext/dockerd", "succeed to start dockerd")
 
@@ -171,7 +164,6 @@ else
 	[ $_DOCKERD_ROOTLESS_CHILD = 1 ]
 	echo "`+rlsDPidPrefix+`$$"
 	rm -f /run/docker /run/xtables.lock
-	rootlessctl --socket=$ROOTLESSKIT_STATE_DIR/api.sock add-ports `+context.Addr()+`:2375:2375/tcp
 	rootlessctl --socket=$ROOTLESSKIT_STATE_DIR/api.sock add-ports `+context.Addr()+`:2377:2377/tcp
 	rootlessctl --socket=$ROOTLESSKIT_STATE_DIR/api.sock add-ports `+context.Addr()+`:7946:7946/tcp
 	rootlessctl --socket=$ROOTLESSKIT_STATE_DIR/api.sock add-ports `+context.Addr()+`:7946:7946/udp

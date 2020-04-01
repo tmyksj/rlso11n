@@ -50,8 +50,6 @@ rlso11n uses environment variables for settings:
 ```
 RLSO11N_DIR              use this directory to run rootless containers.
 RLSO11N_HOST_LIST        use these hosts to run rlso11n.
-RLSO11N_SSH_USERNAME     use ssh username to connect remote node via ssh.
-RLSO11N_SSH_IDENTITY     use ssh identity to connect remote node via ssh.
 ```
 
 ## administrator's settings

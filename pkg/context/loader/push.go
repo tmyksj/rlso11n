@@ -9,7 +9,7 @@ import (
 )
 
 func Push(host string) {
-	wait.UntilListen(host + ":" + strconv.Itoa(context.RpcPort()))
+	wait.UntilListenTcp(host + ":" + strconv.Itoa(context.RpcPort()))
 
 	attempt.UntilSucceed(func() error {
 		return rpc.Call(host, rpc.MtdContextPush, &rpc.ReqContextPush{
