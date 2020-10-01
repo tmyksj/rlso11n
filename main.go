@@ -3,7 +3,6 @@ package main
 import (
 	"fmt"
 	"github.com/tmyksj/rlso11n/app/core"
-	"github.com/tmyksj/rlso11n/app/logger"
 	"github.com/tmyksj/rlso11n/cmd"
 	"github.com/tmyksj/rlso11n/cmd/bg"
 	"github.com/tmyksj/rlso11n/cmd/up"
@@ -17,10 +16,10 @@ func main() {
 	app := cli.NewApp()
 	app.Name = "rlso11n"
 	app.Usage = "construct/destruct an orchestration"
-	app.Version = "0.0.3"
+	app.Version = "0.0.4"
 
-	app.After = core.After
-	app.Before = core.Before
+	app.Before = core.Initialize
+	app.After = core.Finalize
 
 	app.Commands = []cli.Command{
 		{
@@ -59,11 +58,9 @@ func main() {
 			Action: up.Swarm,
 		},
 	}
-
 	app.CommandNotFound = cmd.Proxy
 
-	err := app.Run(os.Args)
-	if err != nil {
-		logger.Fatalf("main", "%v", err)
+	if err := app.Run(os.Args); err != nil {
+		_ = fmt.Errorf("failed to start rlso11n, %v", err)
 	}
 }

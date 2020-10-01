@@ -1,10 +1,10 @@
-package attempt
+package util
 
 import (
 	"time"
 )
 
-func UntilSucceed(f func() error) {
+func TryUntilSucceed(f func() error) {
 	for {
 		if err := f(); err != nil {
 			time.Sleep(100 * time.Millisecond)

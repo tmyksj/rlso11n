@@ -14,7 +14,7 @@ func Addr() string {
 
 func SetAddr(val string) {
 	addr = val
-	logger.Infof("pkg/context", "addr = %v", addr)
+	logger.Info(pkg, "addr = %v", addr)
 }
 
 var dir string
@@ -25,7 +25,7 @@ func Dir() string {
 
 func SetDir(val string) {
 	dir = val
-	logger.Infof("pkg/context", "dir = %v", dir)
+	logger.Info(pkg, "dir = %v", dir)
 }
 
 func DockerSock() string {
@@ -48,7 +48,7 @@ func HostList() []string {
 
 func SetHostList(val []string) {
 	hostList = val
-	logger.Infof("pkg/context", "host list = %v", hostList)
+	logger.Info(pkg, "host list = %v", hostList)
 }
 
 var ready = false
@@ -77,5 +77,5 @@ func StarterAddr() string {
 
 func SetStarterAddr(val string) {
 	starterAddr = val
-	logger.Infof("pkg/context", "starter addr = %v", starterAddr)
+	logger.Info(pkg, "starter addr = %v", starterAddr)
 }

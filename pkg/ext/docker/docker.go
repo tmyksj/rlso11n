@@ -14,13 +14,13 @@ func Run(args ...string) (string, error) {
 
 	b, err := cmd.Output()
 	if err != nil {
-		logger.Errorf("pkg/ext/docker", "fail to run docker command, %v", err)
+		logger.Error(pkg, "failed to run docker command, %v", err)
 		return "", err
 	}
 
 	r := strings.TrimSpace(string(b))
 
-	logger.Infof("pkg/ext/docker", "succeed to run docker command")
+	logger.Info(pkg, "succeed to run docker command")
 
 	return r, nil
 }

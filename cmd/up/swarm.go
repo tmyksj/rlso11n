@@ -5,7 +5,7 @@ import (
 	"github.com/tmyksj/rlso11n/pkg/context"
 	"github.com/tmyksj/rlso11n/pkg/context/loader"
 	"github.com/tmyksj/rlso11n/pkg/rpc"
-	"github.com/tmyksj/rlso11n/pkg/util/attempt"
+	"github.com/tmyksj/rlso11n/pkg/util"
 	"github.com/urfave/cli"
 	"sync"
 )
@@ -20,18 +20,16 @@ func Swarm(_ *cli.Context) error {
 
 	for _, h := range context.HostList() {
 		go func(host string) {
-			attempt.UntilSucceed(func() error {
+			util.TryUntilSucceed(func() error {
 				return networkCreateDockerGwbridge(host)
 			})
-			logger.Infof("cmd/up", "created docker_gwbridge")
 
 			if host == context.StarterAddr() {
-				attempt.UntilSucceed(func() error {
+				util.TryUntilSucceed(func() error {
 					return swarmInit(host)
 				})
-				logger.Infof("cmd/up", "initialized a swarm cluster")
 
-				attempt.UntilSucceed(func() error {
+				util.TryUntilSucceed(func() error {
 					t, e := swarmJoinToken(host)
 					if e == nil {
 						joinToken = t
@@ -39,7 +37,6 @@ func Swarm(_ *cli.Context) error {
 
 					return e
 				})
-				logger.Infof("cmd/up", "got a join token")
 			}
 
 			wg1.Done()
@@ -54,10 +51,9 @@ func Swarm(_ *cli.Context) error {
 	for _, h := range context.HostList() {
 		if h != context.StarterAddr() {
 			go func(host string) {
-				attempt.UntilSucceed(func() error {
+				util.TryUntilSucceed(func() error {
 					return swarmJoin(host, joinToken)
 				})
-				logger.Infof("cmd/up", "joined to the swarm cluster")
 
 				wg2.Done()
 			}(h)
@@ -66,7 +62,7 @@ func Swarm(_ *cli.Context) error {
 
 	wg2.Wait()
 
-	logger.Infof("cmd/up", "the swarm cluster is ready")
+	logger.Info(pkg, "the swarm cluster is ready")
 
 	return nil
 }
@@ -84,11 +80,11 @@ func networkCreateDockerGwbridge(host string) error {
 		},
 	}, &rpc.ResDockerRun{})
 	if err != nil {
-		logger.Errorf("cmd/up", "fail to create docker_gwbridge, %v", err)
+		logger.Error(pkg, "-> %v, failed to create docker_gwbridge, %v", host, err)
 		return err
 	}
 
-	logger.Infof("cmd/up", "succeed to create docker_gwbridge")
+	logger.Info(pkg, "-> %v, succeed to create docker_gwbridge", host)
 
 	return nil
 }
@@ -101,11 +97,11 @@ func swarmInit(host string) error {
 		},
 	}, &rpc.ResDockerRun{})
 	if err != nil {
-		logger.Errorf("cmd/up", "fail to init swarm cluster, %v", err)
+		logger.Error(pkg, "-> %v, failed to init swarm cluster, %v", host, err)
 		return err
 	}
 
-	logger.Infof("cmd/up", "succeed to init swarm cluster")
+	logger.Info(pkg, "-> %v, succeed to init swarm cluster", host)
 
 	return nil
 }
@@ -120,11 +116,11 @@ func swarmJoin(host string, token string) error {
 		},
 	}, &rpc.ResDockerRun{})
 	if err != nil {
-		logger.Errorf("cmd/up", "fail to join swarm cluster, %v", err)
+		logger.Error(pkg, "-> %v, failed to join to swarm cluster, %v", host, err)
 		return err
 	}
 
-	logger.Infof("cmd/up", "succeed to join swarm cluster", )
+	logger.Info(pkg, "-> %v, succeed to join to swarm cluster", host)
 
 	return nil
 }
@@ -139,11 +135,11 @@ func swarmJoinToken(host string) (string, error) {
 		},
 	}, &res)
 	if err != nil {
-		logger.Errorf("cmd/up", "fail to get join token, %v", err)
+		logger.Error(pkg, "-> %v, failed to get join token, %v", host, err)
 		return "", err
 	}
 
-	logger.Infof("cmd/up", "succeed to get join token")
+	logger.Info(pkg, "-> %v, succeed to get join token", host)
 
 	return res.Output, nil
 }

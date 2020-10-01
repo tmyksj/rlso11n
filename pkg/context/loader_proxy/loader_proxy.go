@@ -49,14 +49,14 @@ func setup(req *SetupReq) {
 
 func setupDir() {
 	if err := os.MkdirAll(context.Dir(), 0755); err != nil {
-		logger.Errorf("pkg/context/loader_proxy", "fail to make directory, %v", err)
+		logger.Error(pkg, "failed to make directory, %v", err)
 	} else {
-		logger.Infof("pkg/context/loader_proxy", "succeed to make directory")
+		logger.Info(pkg, "succeed to make directory")
 	}
 }
 
 func setupDirFinalizer() {
-	core.Finalize(func() {
+	core.RegisterFinalizer(func() {
 		if _, err := os.Stat(context.Dir()); os.IsNotExist(err) {
 			return
 		}
@@ -67,24 +67,24 @@ func setupDirFinalizer() {
 			"/bin/sh", "-c", "rm -rf $XDG_CONFIG_HOME $XDG_CACHE_HOME $XDG_DATA_HOME $XDG_RUNTIME_DIR")
 		cmd.Env = context.Env()
 		if err := cmd.Run(); err != nil {
-			logger.Errorf("pkg/context/loader_proxy", "fail to cleanup directory, %v", err)
+			logger.Error(pkg, "failed to cleanup directory, %v", err)
 		}
 
 		if err := os.RemoveAll(context.Dir()); err != nil {
-			logger.Errorf("pkg/context/loader_proxy", "fail to remove directory, %v", err)
+			logger.Error(pkg, "failed to remove directory, %v", err)
 		} else {
-			logger.Infof("pkg/context/loader_proxy", "succeed to remove directory")
+			logger.Info(pkg, "succeed to remove directory")
 		}
 	})
 }
 
 func parseAddr(hostList []string) string {
 	if ifaces, err := net.Interfaces(); err != nil {
-		logger.Errorf("pkg/context/loader", "fail to get interfaces, %v", err)
+		logger.Error(pkg, "failed to get interfaces, %v", err)
 	} else {
 		for _, i := range ifaces {
 			if addrs, err := i.Addrs(); err != nil {
-				logger.Errorf("pkg/context/loader", "fail to get addrs, %v", err)
+				logger.Error(pkg, "failed to get addresses, %v", err)
 			} else {
 				for _, ad := range addrs {
 					var ip string

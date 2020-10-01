@@ -5,7 +5,7 @@ import (
 	"github.com/tmyksj/rlso11n/app/logger"
 	"github.com/tmyksj/rlso11n/pkg/context"
 	"github.com/tmyksj/rlso11n/pkg/context/loader"
-	"github.com/tmyksj/rlso11n/pkg/util/wait"
+	"github.com/tmyksj/rlso11n/pkg/util"
 	"github.com/urfave/cli"
 	"io"
 	"os"
@@ -45,24 +45,24 @@ func run(wg *sync.WaitGroup, host string) {
 	cmd.Stderr = os.Stderr
 
 	if err := cmd.Start(); err != nil {
-		logger.Errorf("cmd/bg", "failed to start server, %v", err)
+		logger.Error(pkg, "failed to start server, %v", err)
 		return
 	}
 
 	loader.Push(host)
-	wait.Interrupt()
+	util.WaitInterrupt()
 
 	if err := cmd.Process.Signal(syscall.SIGINT); err != nil {
-		logger.Warnf("cmd/bg", "fail to send sigint to server, %v", err)
+		logger.Warn(pkg, "failed to send sigint to server, %v", err)
 
 		if err := cmd.Process.Kill(); err != nil {
-			logger.Errorf("cmd/bg", "fail to kill server, %v", err)
+			logger.Error(pkg, "failed to kill server, %v", err)
 			return
 		}
 	}
 
 	if err := cmd.Wait(); err != nil {
-		logger.Warnf("cmd/bg", "fail to wait server, %v", err)
+		logger.Warn(pkg, "failed to wait server, %v", err)
 	}
 }
 
@@ -80,38 +80,38 @@ func runViaSsh(wg *sync.WaitGroup, host string) {
 	stdin, err := cmd.StdinPipe()
 
 	if err != nil {
-		logger.Errorf("cmd/bg", "fail to open pipe (stdin) to %v, %v", host, err)
+		logger.Error(pkg, "failed to open pipe (stdin) to %v, %v", host, err)
 		return
 	}
 
 	defer func() {
 		if err := stdin.Close(); err != nil && err != io.EOF {
-			logger.Errorf("cmd/bg", "fail to close pipe (stdin) of %v, %v", host, err)
+			logger.Error(pkg, "failed to close pipe (stdin) of %v, %v", host, err)
 		}
 	}()
 
 	if err := cmd.Start(); err != nil {
-		logger.Errorf("cmd/bg", "failed to start ssh to %v, %v", host, err)
+		logger.Error(pkg, "failed to start ssh to %v, %v", host, err)
 		return
 	}
 
 	if _, err := fmt.Fprintln(stdin, "rlso11n bg/server"); err != nil {
-		logger.Errorf("cmd/bg", "failed to start worker of %v, %v", host, err)
+		logger.Error(pkg, "failed to start worker of %v, %v", host, err)
 		return
 	}
 
 	loader.Push(host)
-	wait.Interrupt()
+	util.WaitInterrupt()
 
 	if _, err := fmt.Fprintln(stdin, "\x03"); err != nil {
-		logger.Errorf("cmd/bg", "fail to send sigint to %v, %v", host, err)
+		logger.Error(pkg, "failed to send sigint to %v, %v", host, err)
 	}
 
 	if _, err := fmt.Fprintln(stdin, "exit"); err != nil {
-		logger.Warnf("cmd/bg", "fail to send exit to %v, %v", host, err)
+		logger.Warn(pkg, "failed to send exit to %v, %v", host, err)
 	}
 
 	if err := cmd.Wait(); err != nil {
-		logger.Warnf("cmd/bg", "fail to wait ssh of %v, %v", host, err)
+		logger.Warn(pkg, "failed to wait ssh of %v, %v", host, err)
 	}
 }

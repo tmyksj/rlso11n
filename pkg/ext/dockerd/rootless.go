@@ -5,7 +5,7 @@ import (
 	"github.com/tmyksj/rlso11n/app/core"
 	"github.com/tmyksj/rlso11n/app/logger"
 	"github.com/tmyksj/rlso11n/pkg/context"
-	"github.com/tmyksj/rlso11n/pkg/util/wait"
+	"github.com/tmyksj/rlso11n/pkg/util"
 	"io"
 	"io/ioutil"
 	"os/exec"
@@ -27,46 +27,43 @@ func startRootless() error {
 	defer rlsMu.Unlock()
 
 	if rlsD != nil {
-		logger.Infof("pkg/ext/dockerd", "dockerd is already running")
+		logger.Info(pkg, "dockerd is already running")
 		return nil
 	}
 
 	scriptPath := context.Dir() + "/" + rlsDScript
 	if err := writeRlsDScript(scriptPath); err != nil {
-		logger.Errorf("pkg/ext/dockerd", "fail to create script file, %v", err)
+		logger.Error(pkg, "failed to create script file, %v", err)
 		return err
 	}
 
-	rlsD = exec.Command(scriptPath, "--experimental",
-		"--host", "unix://"+context.DockerSock(),
-		"--storage-driver", "vfs")
+	rlsD = exec.Command(scriptPath)
 	rlsD.Env = context.Env()
 	rlsD.SysProcAttr = &syscall.SysProcAttr{
 		Setpgid: true,
 	}
 
 	if out, err := rlsD.StdoutPipe(); err != nil {
-		logger.Errorf("pkg/ext/dockerd", "fail to pipe stdout, %v", err)
+		logger.Error(pkg, "failed to pipe stdout, %v", err)
 	} else {
 		go pipeStdout(out)
 	}
 
 	if out, err := rlsD.StderrPipe(); err != nil {
-		logger.Errorf("pkg/ext/dockerd", "fail to pipe stderr, %v", err)
+		logger.Error(pkg, "failed to pipe stderr, %v", err)
 	} else {
 		go pipeStderr(out)
 	}
 
 	if err := rlsD.Start(); err != nil {
-		logger.Errorf("pkg/ext/dockerd", "fail to start dockerd, %v", err)
+		logger.Error(pkg, "failed to start dockerd, %v", err)
 		return err
 	}
 
-	wait.UntilListenUnix(context.DockerSock())
+	core.RegisterFinalizer(rlsDFinalize)
+	util.WaitUntilListenUnix(context.DockerSock())
 
-	logger.Infof("pkg/ext/dockerd", "succeed to start dockerd")
-
-	core.Finalize(rlsDFinalize)
+	logger.Info(pkg, "succeed to start dockerd")
 
 	return nil
 }
@@ -74,33 +71,33 @@ func startRootless() error {
 func pipeStderr(r io.ReadCloser) {
 	defer func() {
 		if err := r.Close(); err != nil {
-			logger.Warnf("pkg/ext/dockerd", "fail to close pipe, %v", err)
+			logger.Warn(pkg, "failed to close pipe, %v", err)
 		}
 	}()
 
 	s := bufio.NewScanner(r)
 	for s.Scan() {
-		logger.Infof("pkg/ext/dockerd", s.Text())
+		logger.Info(pkg, "<- dockerd, %v", s.Text())
 	}
 }
 
 func pipeStdout(r io.ReadCloser) {
 	defer func() {
 		if err := r.Close(); err != nil {
-			logger.Warnf("pkg/ext/dockerd", "fail to close pipe, %v", err)
+			logger.Warn(pkg, "failed to close pipe, %v", err)
 		}
 	}()
 
 	s := bufio.NewScanner(r)
 	for s.Scan() {
 		line := s.Text()
-		logger.Infof("pkg/ext/dockerd", line)
+		logger.Info(pkg, "<- dockerd, %v", line)
 
 		if strings.HasPrefix(line, rlsDPidPrefix) {
 			if pid, err := strconv.Atoi(line[len(rlsDPidPrefix):]); err == nil {
 				rlsDPid = pid
 			} else {
-				logger.Errorf("pkg/ext/dockerd", "fail to parse dockerd pid, %v", err)
+				logger.Error(pkg, "failed to parse dockerd pid, %v", err)
 			}
 
 			break
@@ -108,7 +105,7 @@ func pipeStdout(r io.ReadCloser) {
 	}
 
 	for s.Scan() {
-		logger.Infof("pkg/ext/dockerd", s.Text())
+		logger.Info(pkg, "<- dockerd, %v", s.Text())
 	}
 }
 
@@ -119,7 +116,7 @@ func rlsDFinalize() {
 		if err := syscall.Kill(rlsDPid, syscall.SIGINT); err == nil {
 			requested = true
 		} else {
-			logger.Warnf("pkg/ext/dockerd", "fail to send sigint to dockerd, %v", err)
+			logger.Warn(pkg, "failed to send sigint to dockerd, %v", err)
 		}
 	}
 
@@ -127,7 +124,7 @@ func rlsDFinalize() {
 		if err := rlsD.Process.Signal(syscall.SIGINT); err == nil {
 			requested = true
 		} else {
-			logger.Warnf("pkg/ext/dockerd", "fail to send sigint to rootlesskit, %v", err)
+			logger.Warn(pkg, "failed to send sigint to rootlesskit, %v", err)
 		}
 	}
 
@@ -135,16 +132,16 @@ func rlsDFinalize() {
 		if err := rlsD.Process.Kill(); err == nil {
 			requested = true
 		} else {
-			logger.Errorf("pkg/ext/dockerd", "fail to kill rootlesskit, %v", err)
+			logger.Error(pkg, "failed to kill rootlesskit, %v", err)
 			return
 		}
 	}
 
 	if err := rlsD.Wait(); err != nil {
-		logger.Warnf("pkg/ext/dockerd", "fail to wait dockerd, %v", err)
+		logger.Warn(pkg, "failed to wait dockerd, %v", err)
 	}
 
-	logger.Infof("pkg/ext/dockerd", "succeed to stop dockerd")
+	logger.Info(pkg, "succeed to stop dockerd")
 }
 
 func writeRlsDScript(path string) error {
@@ -153,13 +150,30 @@ set -e -x
 if [ -z $_DOCKERD_ROOTLESS_CHILD ]; then
 	_DOCKERD_ROOTLESS_CHILD=1
 	export _DOCKERD_ROOTLESS_CHILD
+
+	mkdir -p `+context.Dir()+`/lower `+context.Dir()+`/upper `+context.Dir()+`/work `+context.Dir()+`/merged
+	if rootlesskit mount -t overlay overlay \
+			-olowerdir=`+context.Dir()+`/lower,upperdir=`+context.Dir()+`/upper,workdir=`+context.Dir()+`/work \
+			`+context.Dir()+`/merged > /dev/null 2>&1; then
+		STORAGE_DRIVER=overlay2
+	else
+		STORAGE_DRIVER=vfs
+	fi
+	rm -rf `+context.Dir()+`/lower `+context.Dir()+`/upper `+context.Dir()+`/work `+context.Dir()+`/merged
+
 	exec rootlesskit \
-		--state-dir=`+context.Dir()+`/rootlesskit \
-		--net=slirp4netns --mtu=65520 \
-		--disable-host-loopback --port-driver=slirp4netns \
-		--copy-up=/etc --copy-up=/run \
+		--copy-up=/etc \
+		--copy-up=/run \
 		--copy-up=/var/lib \
-		$0 $@
+		--disable-host-loopback \
+		--mtu=65520 \
+		--net=slirp4netns \
+		--port-driver=slirp4netns \
+		--state-dir=`+context.Dir()+`/rootlesskit \
+		$0 \
+			--experimental \
+			--host unix://`+context.DockerSock()+` \
+			--storage-driver $STORAGE_DRIVER
 else
 	[ $_DOCKERD_ROOTLESS_CHILD = 1 ]
 	echo "`+rlsDPidPrefix+`$$"

@@ -26,7 +26,7 @@ func proxy(c *cli.Context, command string, prefix string, fullCommand string, f 
 		}
 
 		if err := f(c); err != nil {
-			logger.Errorf("cmd", "fail to exec command, %v", err)
+			logger.Error(pkg, "failed to execute command, %v", err)
 		}
 
 		return true

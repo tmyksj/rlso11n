@@ -22,13 +22,13 @@ install_dependencies: _mkdir_bin
 		tar zxf docker.tgz --directory=$(_BIN) --strip-components=1; \
 		\
 		cd $$temp; \
-		git clone https://github.com/rootless-containers/rootlesskit.git -b v0.7.0; \
+		git clone https://github.com/rootless-containers/rootlesskit.git -b v0.10.1; \
 		cd rootlesskit; \
 		make; \
 		cp bin/* $(_BIN); \
 		\
 		cd $$temp; \
-		git clone https://github.com/rootless-containers/slirp4netns.git -b v0.4.2; \
+		git clone https://github.com/rootless-containers/slirp4netns.git -b v0.4.7; \
 		cd slirp4netns; \
 		./autogen.sh; \
 		./configure --prefix=$(PREFIX); \

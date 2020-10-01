@@ -5,7 +5,7 @@ import (
 	"github.com/tmyksj/rlso11n/pkg/context"
 	"github.com/tmyksj/rlso11n/pkg/context/loader"
 	"github.com/tmyksj/rlso11n/pkg/rpc"
-	"github.com/tmyksj/rlso11n/pkg/util/attempt"
+	"github.com/tmyksj/rlso11n/pkg/util"
 	"github.com/urfave/cli"
 	"sync"
 )
@@ -18,10 +18,10 @@ func Dockerd(_ *cli.Context) error {
 
 	for _, h := range context.HostList() {
 		go func(host string) {
-			attempt.UntilSucceed(func() error {
+			util.TryUntilSucceed(func() error {
 				return rpc.Call(host, rpc.MtdDockerdStart, &rpc.ReqDockerdStart{}, &rpc.ResDockerdStart{})
 			})
-			logger.Infof("cmd/up", "started dockerd")
+			logger.Info(pkg, "started dockerd")
 
 			wg.Done()
 		}(h)
@@ -29,7 +29,7 @@ func Dockerd(_ *cli.Context) error {
 
 	wg.Wait()
 
-	logger.Infof("cmd/up", "started all dockerd")
+	logger.Info(pkg, "started dockerd at all hosts")
 
 	return nil
 }

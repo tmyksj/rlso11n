@@ -3,15 +3,14 @@ package loader
 import (
 	"github.com/tmyksj/rlso11n/pkg/context"
 	"github.com/tmyksj/rlso11n/pkg/rpc"
-	"github.com/tmyksj/rlso11n/pkg/util/attempt"
-	"github.com/tmyksj/rlso11n/pkg/util/wait"
+	"github.com/tmyksj/rlso11n/pkg/util"
 	"strconv"
 )
 
 func Push(host string) {
-	wait.UntilListenTcp(host + ":" + strconv.Itoa(context.RpcPort()))
+	util.WaitUntilListenTcp(host + ":" + strconv.Itoa(context.RpcPort()))
 
-	attempt.UntilSucceed(func() error {
+	util.TryUntilSucceed(func() error {
 		return rpc.Call(host, rpc.MtdContextPush, &rpc.ReqContextPush{
 			Dir:         context.Dir(),
 			HostList:    context.HostList(),

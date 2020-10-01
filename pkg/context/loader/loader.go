@@ -17,7 +17,7 @@ const (
 
 func LoadAsCommander() {
 	Pull("0.0.0.0")
-	logger.Infof("pkg/context/loader", "set context as commander from existing rpc server")
+	logger.Info(pkg, "set context as commander from existing rpc server")
 }
 
 func LoadAsStarter() {
@@ -29,7 +29,7 @@ func LoadAsStarter() {
 		Dir: false,
 	})
 
-	logger.Infof("pkg/context/loader", "set context as starter from environment")
+	logger.Info(pkg, "set context as starter from environment variables")
 }
 
 func parseDir(val string) string {

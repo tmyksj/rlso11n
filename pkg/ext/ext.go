@@ -13,13 +13,13 @@ func Run(args ...string) (string, error) {
 
 	b, err := cmd.Output()
 	if err != nil {
-		logger.Errorf("pkg/err", "fail to run command, %v", err)
+		logger.Error(pkg, "failed to run command, %v", err)
 		return "", err
 	}
 
 	r := strings.TrimSpace(string(b))
 
-	logger.Infof("pg/ext", "succeed to run command")
+	logger.Info(pkg, "succeed to run command")
 
 	return r, nil
 }

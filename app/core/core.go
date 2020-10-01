@@ -7,33 +7,25 @@ import (
 	"time"
 )
 
-func After(_ *cli.Context) error {
-	finalize()
-	logger.Infof("app/core", "exit")
-
-	return nil
-}
-
-func Before(_ *cli.Context) error {
-	initialize()
-	logger.Infof("app/core", "completed to initialize")
-
-	return nil
-}
-
-var finalizeFuncList []func()
-
-func Finalize(f func()) {
-	finalizeFuncList = append(finalizeFuncList, f)
-}
-
-func finalize() {
-	for i := len(finalizeFuncList) - 1; i >= 0; i-- {
-		finalizeFuncList[i]()
-	}
-}
-
-func initialize() {
+func Initialize(_ *cli.Context) error {
 	logger.Init()
 	rand.Seed(time.Now().UnixNano())
+
+	logger.Info(pkg, "initialized")
+	return nil
+}
+
+var finalizerList []func()
+
+func Finalize(_ *cli.Context) error {
+	for i := len(finalizerList) - 1; i >= 0; i-- {
+		finalizerList[i]()
+	}
+
+	logger.Info(pkg, "exit")
+	return nil
+}
+
+func RegisterFinalizer(f func()) {
+	finalizerList = append(finalizerList, f)
 }

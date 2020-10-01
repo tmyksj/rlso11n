@@ -6,7 +6,7 @@ import (
 	"github.com/tmyksj/rlso11n/pkg/context"
 	"github.com/tmyksj/rlso11n/pkg/context/loader"
 	"github.com/tmyksj/rlso11n/pkg/rpc"
-	"github.com/tmyksj/rlso11n/pkg/util/attempt"
+	"github.com/tmyksj/rlso11n/pkg/util"
 	"github.com/urfave/cli"
 	"strconv"
 	"strings"
@@ -31,15 +31,13 @@ func Exec(c *cli.Context) error {
 
 	var output = make([]string, len(targetList))
 
-	logger.Infof("cmd/exec", "execute command at %v", targetList)
-
 	var wg sync.WaitGroup
 	wg.Add(len(targetList))
 
 	for i, t := range targetList {
 		go func(idx int, tgt target) {
 			if commandSep == -1 {
-				go exec(&wg, tgt.host, command, &output[idx])
+				exec(&wg, tgt.host, command, &output[idx])
 			} else {
 				replaced := make([]string, len(command))
 				for j, _ := range command {
@@ -51,7 +49,7 @@ func Exec(c *cli.Context) error {
 					execDocker(&wg, tgt.host, replaced, &output[idx])
 					break
 				default:
-					logger.Errorf("cmd/exec", "command not support")
+					logger.Error(pkg, "-> %v, %v is not supported", tgt.host, replaced[0])
 					wg.Done()
 					break
 				}
@@ -61,7 +59,7 @@ func Exec(c *cli.Context) error {
 
 	wg.Wait()
 
-	logger.Infof("cmd/exec", "executed command at all target")
+	logger.Info(pkg, "executed command at all targets")
 
 	for i, t := range targetList {
 		fmt.Println("[" + t.host + "]")
@@ -74,7 +72,7 @@ func Exec(c *cli.Context) error {
 func exec(wg *sync.WaitGroup, host string, command []string, output *string) {
 	defer wg.Done()
 
-	attempt.UntilSucceed(func() error {
+	util.TryUntilSucceed(func() error {
 		res := rpc.ResExtRun{}
 		if err := rpc.Call(host, rpc.MtdExtRun, &rpc.ReqExtRun{Args: command}, &res); err != nil {
 			return err
@@ -84,7 +82,8 @@ func exec(wg *sync.WaitGroup, host string, command []string, output *string) {
 
 		return nil
 	})
-	logger.Infof("cmd/exec", "executed command")
+
+	logger.Info(pkg, "-> %v, executed command", host)
 }
 
 type target struct {
