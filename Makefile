@@ -1,7 +1,7 @@
 PREFIX=$(HOME)
 
 _BIN=$(PREFIX)/bin
-_URI_DOCKER=https://master.dockerproject.org/linux/x86_64/docker.tgz
+_URI_DOCKER=https://download.docker.com/linux/static/test/$(shell uname -m)/docker-20.10.0-rc1.tgz
 
 all:
 	go build -o build/rlso11n main.go
@@ -34,6 +34,16 @@ install_dependencies: _mkdir_bin
 		./configure --prefix=$(PREFIX); \
 		make; \
 		make install; \
+		\
+		cd $$temp; \
+		if which nvidia-container-runtime-hook > /dev/null 2>&1 && \
+				[ -f /etc/nvidia-container-runtime/config.toml ] && \
+				[ ! -f $(_BIN)/nvidia-container-runtime-hook ]; then \
+			echo "#!/bin/sh" >> $(_BIN)/nvidia-container-runtime-hook; \
+			echo "$$(which nvidia-container-runtime-hook) -config=$(_BIN)/nvidia-container-runtime-hook.config \"\$$@\"" >> $(_BIN)/nvidia-container-runtime-hook; \
+			chmod +x $(_BIN)/nvidia-container-runtime-hook; \
+			sed -e "s/#no-cgroups = false/no-cgroups = true/" /etc/nvidia-container-runtime/config.toml >> $(_BIN)/nvidia-container-runtime-hook.config; \
+		fi; \
 	'
 uninstall:
 	rm -rf $(_BIN)/rlso11n

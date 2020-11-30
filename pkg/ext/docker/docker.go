@@ -3,6 +3,7 @@ package docker
 import (
 	"github.com/tmyksj/rlso11n/app/logger"
 	"github.com/tmyksj/rlso11n/pkg/context"
+	"github.com/tmyksj/rlso11n/pkg/errors"
 	"os/exec"
 	"strings"
 )
@@ -14,8 +15,7 @@ func Run(args ...string) (string, error) {
 
 	b, err := cmd.Output()
 	if err != nil {
-		logger.Error(pkg, "failed to run docker command, %v", err)
-		return "", err
+		return "", errors.By(err, "failed to run docker command")
 	}
 
 	r := strings.TrimSpace(string(b))

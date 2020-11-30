@@ -4,8 +4,8 @@ import (
 	"net"
 )
 
-func waitUntilListen(network string, address string) {
-	TryUntilSucceed(func() error {
+func waitListen(network string, address string) error {
+	return Try(func() error {
 		conn, err := net.Dial(network, address)
 		if err != nil {
 			return err

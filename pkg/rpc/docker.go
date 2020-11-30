@@ -16,16 +16,18 @@ type ResDockerRun struct {
 }
 
 func (r *Rpc) DockerRun(req *ReqDockerRun, res *ResDockerRun) error {
-	if err := context.ReadyOrError(); err != nil {
-		return err
-	}
+	return do(func() error {
+		if err := context.ReadyOrError(); err != nil {
+			return err
+		}
 
-	o, err := docker.Run(req.Args...)
-	if err != nil {
-		return err
-	}
+		o, err := docker.Run(req.Args...)
+		if err != nil {
+			return err
+		}
 
-	res.Output = o
+		res.Output = o
 
-	return nil
+		return nil
+	})
 }

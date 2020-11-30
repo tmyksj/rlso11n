@@ -4,55 +4,69 @@ import (
 	"github.com/tmyksj/rlso11n/app/core"
 	"github.com/tmyksj/rlso11n/app/logger"
 	"github.com/tmyksj/rlso11n/pkg/context"
+	"github.com/tmyksj/rlso11n/pkg/errors"
 	"net"
 	"os"
 	"os/exec"
 )
 
 type LoadReq struct {
-	Dir           string
-	HostList      []string
-	StarterAddr   string
+	Dir         string
+	HostList    []context.Host
+	ManagerAddr string
 }
-
-const CurrentAddr = "CurrentAddr"
 
 type SetupReq struct {
 	Dir bool
 }
 
-func Load(loadReq *LoadReq, setupReq *SetupReq) {
-	load(loadReq)
-	setup(setupReq)
+func Load(loadReq *LoadReq, setupReq *SetupReq) error {
+	if err := load(loadReq); err != nil {
+		return errors.By(err, "failed to load")
+	}
+
+	if err := setup(setupReq); err != nil {
+		return errors.By(err, "failed to setup")
+	}
 
 	context.SetReady(true)
+
+	return nil
 }
 
-func load(req *LoadReq) {
-	context.SetAddr(parseAddr(req.HostList))
+func load(req *LoadReq) error {
+	myAddr, err := findMyAddr(req.HostList)
+	if err != nil {
+		return err
+	}
+
 	context.SetDir(req.Dir)
 	context.SetHostList(req.HostList)
+	context.SetManagerAddr(req.ManagerAddr)
+	context.SetMyAddr(myAddr)
 
-	if req.StarterAddr == CurrentAddr {
-		context.SetStarterAddr(context.Addr())
-	} else {
-		context.SetStarterAddr(req.StarterAddr)
-	}
+	return nil
 }
 
-func setup(req *SetupReq) {
+func setup(req *SetupReq) error {
 	if req.Dir {
-		setupDir()
+		if err := setupDir(); err != nil {
+			return err
+		}
+
 		setupDirFinalizer()
 	}
+
+	return nil
 }
 
-func setupDir() {
+func setupDir() error {
 	if err := os.MkdirAll(context.Dir(), 0755); err != nil {
-		logger.Error(pkg, "failed to make directory, %v", err)
-	} else {
-		logger.Info(pkg, "succeed to make directory")
+		return errors.By(err, "failed to make directory")
 	}
+
+	logger.Info(pkg, "succeed to make directory")
+	return nil
 }
 
 func setupDirFinalizer() {
@@ -78,32 +92,35 @@ func setupDirFinalizer() {
 	})
 }
 
-func parseAddr(hostList []string) string {
-	if ifaces, err := net.Interfaces(); err != nil {
-		logger.Error(pkg, "failed to get interfaces, %v", err)
-	} else {
-		for _, i := range ifaces {
-			if addrs, err := i.Addrs(); err != nil {
-				logger.Error(pkg, "failed to get addresses, %v", err)
-			} else {
-				for _, ad := range addrs {
-					var ip string
-					switch v := ad.(type) {
-					case *net.IPAddr:
-						ip = v.IP.String()
-					case *net.IPNet:
-						ip = v.IP.String()
-					}
+func findMyAddr(hostList []context.Host) (string, error) {
+	ifaces, err := net.Interfaces()
+	if err != nil {
+		return "", errors.By(err, "failed to get interfaces")
+	}
 
-					for _, h := range hostList {
-						if ip == h {
-							return ip
-						}
-					}
+	for _, iface := range ifaces {
+		addrs, err := iface.Addrs()
+		if err != nil {
+			logger.Warn(pkg, "failed to get addresses, %v", err)
+			continue
+		}
+
+		for _, addr := range addrs {
+			var ip string
+			switch v := addr.(type) {
+			case *net.IPAddr:
+				ip = v.IP.String()
+			case *net.IPNet:
+				ip = v.IP.String()
+			}
+
+			for _, h := range hostList {
+				if ip == h.Addr {
+					return ip, nil
 				}
 			}
 		}
 	}
 
-	return ""
+	return "", errors.By(nil, "failed to get my address")
 }

@@ -1,35 +1,47 @@
 # rlso11n: rootless-orchestration
 rlso11n does:
 - manages docker daemons.
-- constructs/destructs an cluster (using docker swarm mode).
+- constructs/destructs a cluster (using docker swarm mode).
 
 note: any releases under version 1.0.0 may contain breaking changes.
 
 ## usage
-rlso11n uses two terminals (or background jobs).
-
-exports an ip address list of hosts:
-```
-$ # terminal 1
-$ export RLSO11N_HOST_LIST="172.16.0.1,172.16.0.2"
-```
+rlso11n needs two terminals (or background jobs).
 
 starts rlso11n servers:
 ```
 $ # terminal 1
-$ rlso11n bg/start
+$ rlso11n serve --hosts node-0,node-1
 ```
 
 starts docker daemons using rootless mode:
 ```
 $ # terminal 2
-$ rlso11n up/dockerd
+$ rlso11n up dockerd
 ```
 
 constructs a swarm cluster:
 ```
 $ # terminal 2
-$ rlso11n up/swarm
+$ rlso11n up swarm
+```
+
+executes commands:
+```
+$ # terminal 2
+$
+$ # execute `hostname` at all nodes
+$ rlso11n exec --nodes all hostname
+$
+$ # execute `hostname` at 0, 2-7 nodes
+$ rlso11n exec --nodes 0,2-7 hostname
+$
+$ # execute `docker ps -a` at all nodes
+$ # --docker option appends -H option automatically
+$ rlso11n exec --nodes all --docker ps -a
+$
+$ # \$i is replaced to node index
+$ rlso11n exec --nodes all echo \$i
 ```
 
 to exit rlso11n, send ctrl+c at terminal 1:
@@ -38,18 +50,19 @@ to exit rlso11n, send ctrl+c at terminal 1:
 $
 ```
 
+## settings
+rlso11n uses command options passed to serve command for settings.
+available options are:
+```
+--dir /tmp/rlso11n              use this directory to run rootless containers
+--hosts node-0,node-1           use these hosts to run rlso11n
+```
+
 ## installation
 ```
 $ make
 $ make install
 $ make install_dependencies
-```
-
-## settings
-rlso11n uses environment variables for settings:
-```
-RLSO11N_DIR              use this directory to run rootless containers.
-RLSO11N_HOST_LIST        use these hosts to run rlso11n.
 ```
 
 ## administrator's settings

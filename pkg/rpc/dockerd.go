@@ -14,9 +14,11 @@ type ResDockerdStart struct {
 }
 
 func (r *Rpc) DockerdStart(req *ReqDockerdStart, res *ResDockerdStart) error {
-	if err := context.ReadyOrError(); err != nil {
-		return err
-	}
+	return do(func() error {
+		if err := context.ReadyOrError(); err != nil {
+			return err
+		}
 
-	return dockerd.Start()
+		return dockerd.Start()
+	})
 }

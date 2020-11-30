@@ -2,63 +2,94 @@ package main
 
 import (
 	"fmt"
-	"github.com/tmyksj/rlso11n/app/core"
 	"github.com/tmyksj/rlso11n/cmd"
-	"github.com/tmyksj/rlso11n/cmd/bg"
+	"github.com/tmyksj/rlso11n/cmd/exec"
+	"github.com/tmyksj/rlso11n/cmd/serve"
+	"github.com/tmyksj/rlso11n/cmd/serve_rpc"
 	"github.com/tmyksj/rlso11n/cmd/up"
-	"github.com/urfave/cli"
+	"github.com/urfave/cli/v2"
 	"os"
 )
 
 func main() {
-	cli.AppHelpTemplate = fmt.Sprintf("\n\n%s\n", cli.AppHelpTemplate)
-
 	app := cli.NewApp()
 	app.Name = "rlso11n"
-	app.Usage = "construct/destruct an orchestration"
-	app.Version = "0.0.4"
+	app.Usage = "manage engines in rootless mode"
+	app.Version = "0.1.0"
 
-	app.Before = core.Initialize
-	app.After = core.Finalize
-
-	app.Commands = []cli.Command{
+	app.After = cmd.After
+	app.Before = cmd.Before
+	app.Commands = []*cli.Command{
 		{
-			Name:   "bg/server",
-			Usage:  "(executed by " + app.Name + " only) starts rpc server",
-			Action: bg.Server,
+			Name:  "exec",
+			Usage: "execute command",
+			Flags: []cli.Flag{
+				&cli.BoolFlag{
+					Name:  "docker",
+					Usage: "execute docker command",
+				},
+				&cli.StringFlag{
+					Name:  "nodes",
+					Usage: "nodes to use",
+					Value: "all",
+				},
+				&cli.StringFlag{
+					Name:  "server",
+					Usage: "hostname or ip address to connect to",
+					Value: "0.0.0.0",
+				},
+			},
+			Action: exec.Action,
+		},
+		{
+			Name:  "serve",
+			Usage: "start server at all nodes",
+			Flags: []cli.Flag{
+				&cli.StringFlag{
+					Name:  "dir",
+					Usage: "working directory to use",
+				},
+				&cli.StringFlag{
+					Name:  "hostfile",
+					Usage: "hostfile to use",
+				},
+				&cli.StringFlag{
+					Name:  "hosts",
+					Usage: "hostname or ip address of all nodes",
+				},
+			},
+			Action: serve.Action,
+		},
+		{
+			Name:   "serve-rpc",
+			Usage:  "start rpc server",
 			Hidden: true,
+			Action: serve_rpc.Action,
 		},
 		{
-			Name:   "bg/start",
-			Usage:  "starts rpc server at all nodes",
-			Action: bg.Start,
-		},
-		{
-			Name: "exec@{...}",
-			Usage: "executes command at given nodes\n" +
-				"\t\te.g.) " + app.Name + " exec@all hostname          # at all nodes\n" +
-				"\t\t      " + app.Name + " exec@manager hostname      # at manager nodes\n" +
-				"\t\t      " + app.Name + " exec@worker hostname       # at worker nodes\n" +
-				"\t\t      " + app.Name + " exec@0,2-7 hostname        # at 0, 2-7 nodes\n" +
-				"\t\t      " + app.Name + " exec@2-10 hostname         # at 2-10 nodes",
-		},
-		{
-			Name: "exec@{...}/docker",
-			Usage: "executes docker command at given nodes\n" +
-				"\t\te.g.) " + app.Name + " exec@all/docker run ...    # at all nodes",
-		},
-		{
-			Name:   "up/dockerd",
-			Usage:  "ups docker daemon in rootless mode at all nodes",
-			Action: up.Dockerd,
-		},
-		{
-			Name:   "up/swarm",
-			Usage:  "ups swarm cluster using all nodes",
-			Action: up.Swarm,
+			Name:  "up",
+			Usage: "up engines",
+			Flags: []cli.Flag{
+				&cli.StringFlag{
+					Name:  "server",
+					Usage: "hostname or ip address to connect to",
+					Value: "0.0.0.0",
+				},
+			},
+			Subcommands: []*cli.Command{
+				{
+					Name:   "dockerd",
+					Usage:  "up docker daemon at all nodes",
+					Action: up.Dockerd,
+				},
+				{
+					Name:   "swarm",
+					Usage:  "up swarm cluster using all nodes",
+					Action: up.Swarm,
+				},
+			},
 		},
 	}
-	app.CommandNotFound = cmd.Proxy
 
 	if err := app.Run(os.Args); err != nil {
 		_ = fmt.Errorf("failed to start rlso11n, %v", err)

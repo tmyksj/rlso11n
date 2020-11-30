@@ -1,21 +1,10 @@
 package context
 
 import (
-	"errors"
 	"github.com/tmyksj/rlso11n/app/logger"
+	"github.com/tmyksj/rlso11n/pkg/errors"
 	"os"
 )
-
-var addr string
-
-func Addr() string {
-	return addr
-}
-
-func SetAddr(val string) {
-	addr = val
-	logger.Info(pkg, "addr = %v", addr)
-}
 
 var dir string
 
@@ -40,15 +29,42 @@ func Env() []string {
 		"XDG_RUNTIME_DIR="+Dir()+"/runtime")
 }
 
-var hostList []string
+type Host struct {
+	Addr string
+	Name string
+}
 
-func HostList() []string {
+var hostList []Host
+
+func HostList() []Host {
 	return hostList
 }
 
-func SetHostList(val []string) {
+func SetHostList(val []Host) {
 	hostList = val
-	logger.Info(pkg, "host list = %v", hostList)
+	logger.Info(pkg, "hosts = %v", hostList)
+}
+
+var managerAddr string
+
+func ManagerAddr() string {
+	return managerAddr
+}
+
+func SetManagerAddr(val string) {
+	managerAddr = val
+	logger.Info(pkg, "manager addr = %v", managerAddr)
+}
+
+var myAddr string
+
+func MyAddr() string {
+	return myAddr
+}
+
+func SetMyAddr(val string) {
+	myAddr = val
+	logger.Info(pkg, "my addr = %v", myAddr)
 }
 
 var ready = false
@@ -57,7 +73,7 @@ func ReadyOrError() error {
 	if ready {
 		return nil
 	} else {
-		return errors.New("context is not ready")
+		return errors.By(nil, "context is not ready")
 	}
 }
 
@@ -67,15 +83,4 @@ func SetReady(val bool) {
 
 func RpcPort() int {
 	return 50128
-}
-
-var starterAddr string
-
-func StarterAddr() string {
-	return starterAddr
-}
-
-func SetStarterAddr(val string) {
-	starterAddr = val
-	logger.Info(pkg, "starter addr = %v", starterAddr)
 }

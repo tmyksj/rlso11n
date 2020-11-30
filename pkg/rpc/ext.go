@@ -9,6 +9,7 @@ const MtdExtRun = "Rpc.ExtRun"
 
 type ReqExtRun struct {
 	Args []string
+	Name string
 }
 
 type ResExtRun struct {
@@ -16,16 +17,18 @@ type ResExtRun struct {
 }
 
 func (r *Rpc) ExtRun(req *ReqExtRun, res *ResExtRun) error {
-	if err := context.ReadyOrError(); err != nil {
-		return err
-	}
+	return do(func() error {
+		if err := context.ReadyOrError(); err != nil {
+			return err
+		}
 
-	o, err := ext.Run(req.Args...)
-	if err != nil {
-		return err
-	}
+		o, err := ext.Run(req.Name, req.Args...)
+		if err != nil {
+			return err
+		}
 
-	res.Stdout = o
+		res.Stdout = o
 
-	return nil
+		return nil
+	})
 }

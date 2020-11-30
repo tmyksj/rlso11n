@@ -2,73 +2,89 @@ package up
 
 import (
 	"github.com/tmyksj/rlso11n/app/logger"
+	"github.com/tmyksj/rlso11n/cmd"
 	"github.com/tmyksj/rlso11n/pkg/context"
 	"github.com/tmyksj/rlso11n/pkg/context/loader"
 	"github.com/tmyksj/rlso11n/pkg/rpc"
 	"github.com/tmyksj/rlso11n/pkg/util"
-	"github.com/urfave/cli"
-	"sync"
+	"github.com/urfave/cli/v2"
+	"golang.org/x/sync/errgroup"
 )
 
-func Swarm(_ *cli.Context) error {
-	loader.LoadAsCommander()
+func Swarm(c *cli.Context) error {
+	cServer := c.String("server")
+
+	if err := loader.LoadAsClient(cServer); err != nil {
+		logger.Error(pkg, "failed to load context, %v", err)
+		return cmd.ExitError(err)
+	}
 
 	var joinToken string
 
-	var wg1 sync.WaitGroup
-	wg1.Add(len(context.HostList()))
+	eg1 := errgroup.Group{}
 
-	for _, h := range context.HostList() {
-		go func(host string) {
-			util.TryUntilSucceed(func() error {
+	for _, host := range context.HostList() {
+		host := host
+		eg1.Go(func() error {
+			if err := util.Try(func() error {
 				return networkCreateDockerGwbridge(host)
-			})
+			}); err != nil {
+				return err
+			}
 
-			if host == context.StarterAddr() {
-				util.TryUntilSucceed(func() error {
-					return swarmInit(host)
-				})
+			if host.Addr == context.ManagerAddr() {
+				if err := util.Try(func() error { return swarmInit(host) }); err != nil {
+					return err
+				}
 
-				util.TryUntilSucceed(func() error {
+				if err := util.Try(func() error {
 					t, e := swarmJoinToken(host)
 					if e == nil {
 						joinToken = t
 					}
 
 					return e
-				})
+				}); err != nil {
+					return err
+				}
 			}
 
-			wg1.Done()
-		}(h)
+			return nil
+		})
 	}
 
-	wg1.Wait()
+	if err := eg1.Wait(); err != nil {
+		return cmd.ExitError(err)
+	}
 
-	var wg2 sync.WaitGroup
-	wg2.Add(len(context.HostList()) - 1)
+	eg2 := errgroup.Group{}
 
-	for _, h := range context.HostList() {
-		if h != context.StarterAddr() {
-			go func(host string) {
-				util.TryUntilSucceed(func() error {
+	for _, host := range context.HostList() {
+		host := host
+		if host.Addr != context.ManagerAddr() {
+			eg2.Go(func() error {
+				if err := util.Try(func() error {
 					return swarmJoin(host, joinToken)
-				})
+				}); err != nil {
+					return err
+				}
 
-				wg2.Done()
-			}(h)
+				return nil
+			})
 		}
 	}
 
-	wg2.Wait()
+	if err := eg2.Wait(); err != nil {
+		return cmd.ExitError(err)
+	}
 
 	logger.Info(pkg, "the swarm cluster is ready")
 
 	return nil
 }
 
-func networkCreateDockerGwbridge(host string) error {
-	err := rpc.Call(host, rpc.MtdDockerRun, &rpc.ReqDockerRun{
+func networkCreateDockerGwbridge(host context.Host) error {
+	err := rpc.Call(host.Addr, rpc.MtdDockerRun, &rpc.ReqDockerRun{
 		Args: []string{
 			"network", "create",
 			"--subnet", "172.20.0.0/20",
@@ -80,54 +96,54 @@ func networkCreateDockerGwbridge(host string) error {
 		},
 	}, &rpc.ResDockerRun{})
 	if err != nil {
-		logger.Error(pkg, "-> %v, failed to create docker_gwbridge, %v", host, err)
+		logger.Error(pkg, "failed to create docker_gwbridge at %v, %v", host.Name, err)
 		return err
 	}
 
-	logger.Info(pkg, "-> %v, succeed to create docker_gwbridge", host)
+	logger.Info(pkg, "succeed to create docker_gwbridge at %v", host.Name)
 
 	return nil
 }
 
-func swarmInit(host string) error {
-	err := rpc.Call(host, rpc.MtdDockerRun, &rpc.ReqDockerRun{
+func swarmInit(host context.Host) error {
+	err := rpc.Call(host.Addr, rpc.MtdDockerRun, &rpc.ReqDockerRun{
 		Args: []string{
 			"swarm", "init",
-			"--advertise-addr", host + ":2377",
+			"--advertise-addr", host.Addr + ":2377",
 		},
 	}, &rpc.ResDockerRun{})
 	if err != nil {
-		logger.Error(pkg, "-> %v, failed to init swarm cluster, %v", host, err)
+		logger.Error(pkg, "failed to init swarm cluster at %v, %v", host.Name, err)
 		return err
 	}
 
-	logger.Info(pkg, "-> %v, succeed to init swarm cluster", host)
+	logger.Info(pkg, "succeed to init swarm cluster at %v", host.Name)
 
 	return nil
 }
 
-func swarmJoin(host string, token string) error {
-	err := rpc.Call(host, rpc.MtdDockerRun, &rpc.ReqDockerRun{
+func swarmJoin(host context.Host, token string) error {
+	err := rpc.Call(host.Addr, rpc.MtdDockerRun, &rpc.ReqDockerRun{
 		Args: []string{
 			"swarm", "join",
 			"--token", token,
-			"--advertise-addr", host + ":2377",
-			context.StarterAddr() + ":2377",
+			"--advertise-addr", host.Addr + ":2377",
+			context.ManagerAddr() + ":2377",
 		},
 	}, &rpc.ResDockerRun{})
 	if err != nil {
-		logger.Error(pkg, "-> %v, failed to join to swarm cluster, %v", host, err)
+		logger.Error(pkg, "failed to join to swarm cluster at %v, %v", host.Name, err)
 		return err
 	}
 
-	logger.Info(pkg, "-> %v, succeed to join to swarm cluster", host)
+	logger.Info(pkg, "succeed to join to swarm cluster at %v", host.Name)
 
 	return nil
 }
 
-func swarmJoinToken(host string) (string, error) {
+func swarmJoinToken(host context.Host) (string, error) {
 	res := rpc.ResDockerRun{}
-	err := rpc.Call(host, rpc.MtdDockerRun, &rpc.ReqDockerRun{
+	err := rpc.Call(host.Addr, rpc.MtdDockerRun, &rpc.ReqDockerRun{
 		Args: []string{
 			"swarm", "join-token",
 			"-q",
@@ -135,11 +151,11 @@ func swarmJoinToken(host string) (string, error) {
 		},
 	}, &res)
 	if err != nil {
-		logger.Error(pkg, "-> %v, failed to get join token, %v", host, err)
+		logger.Error(pkg, "failed to get join token at %v, %v", host.Name, err)
 		return "", err
 	}
 
-	logger.Info(pkg, "-> %v, succeed to get join token", host)
+	logger.Info(pkg, "succeed to get join token at %v", host.Name)
 
 	return res.Output, nil
 }
