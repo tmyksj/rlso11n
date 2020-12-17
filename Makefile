@@ -1,7 +1,7 @@
 PREFIX=$(HOME)
 
 _BIN=$(PREFIX)/bin
-_URI_DOCKER=https://download.docker.com/linux/static/test/$(shell uname -m)/docker-20.10.0-rc1.tgz
+_URI_DOCKER=https://download.docker.com/linux/static/stable/$(shell uname -m)/docker-20.10.0.tgz
 
 all:
 	go build -o build/rlso11n main.go

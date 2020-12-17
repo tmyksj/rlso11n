@@ -2,7 +2,6 @@ package main
 
 import (
 	"fmt"
-	"github.com/tmyksj/rlso11n/cmd"
 	"github.com/tmyksj/rlso11n/cmd/exec"
 	"github.com/tmyksj/rlso11n/cmd/serve"
 	"github.com/tmyksj/rlso11n/cmd/serve_rpc"
@@ -15,10 +14,8 @@ func main() {
 	app := cli.NewApp()
 	app.Name = "rlso11n"
 	app.Usage = "manage engines in rootless mode"
-	app.Version = "0.1.0"
+	app.Version = "0.1.1"
 
-	app.After = cmd.After
-	app.Before = cmd.Before
 	app.Commands = []*cli.Command{
 		{
 			Name:  "exec",
